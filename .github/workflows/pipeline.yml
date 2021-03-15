@@ -39,8 +39,8 @@ jobs:
     uses: Veracode/veracode-pipeline-scan-results-to-sarif@v0.1.2
     with:
     pipeline-results-json: results.json
-      output-results-sarif: veracode-results.sarif
-      finding-rule-level: "3:1:0"
+    output-results-sarif: veracode-results.sarif
+    finding-rule-level: "3:1:0"
 
     - name: upload sarif file to repository
       uses: github/codeql-action/upload-sarif@v1
