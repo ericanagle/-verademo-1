@@ -32,5 +32,17 @@ jobs:
       run: unzip pipeline-scan-LATEST.zip pipeline-scan.jar
  
     - name: Engage Ludicrous Speed - Run Pipeline Scan
-      run: java -jar pipeline-scan.jar -f /home/runner/work/verademo-1/verademo-1/target/verademo.war -vid "${{secrets.VERACODE_API_ID}}" -vkey "${{secrets.VERACODE_API_SECRET}}" --fail_on_severity="Very High, High" --issue_details true
+      run: java -jar pipeline-scan.jar -f /home/runner/work/verademo-1/verademo-1/target/verademo.war -vid "${{secrets.VERACODE_API_ID}}" -vkey "${{secrets.VERACODE_API_SECRET}}" --fail_on_severity="Very High, High" --issue_details true -jo true
 
+    - name: Convert pipeline scan output to SARIF format
+    id: convert
+    uses: Veracode/veracode-pipeline-scan-results-to-sarif@v0.1.2
+    with:
+    pipeline-results-json: results.json
+      output-results-sarif: veracode-results.sarif
+      finding-rule-level: "3:1:0"
+
+    - name: upload sarif file to repository
+      uses: github/codeql-action/upload-sarif@v1
+      with: # Path to SARIF file relative to the root of the repository
+      sarif_file: veracode-results.sarif
