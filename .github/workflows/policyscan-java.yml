@@ -31,8 +31,10 @@ jobs:
       - uses: veracode/veracode-uploadandscan-action@master # Run the uploadandscan action. Inputs are described above.
         with:
           appname: '${{ secrets.VERACODE_APP_NAME }}'
-          filepath: '**/*.war'
+          createprofile:  false
+          filepath: 'folder_to_upload/'
+          version: 'Scan from Github job: ${{ github.run_id }}'
           vid: '${{ secrets.VERACODE_API_ID }}'
           vkey: '${{ secrets.VERACODE_API_KEY }}'
-          scantimeout: 15
-          createprofile: false
+          scantimeout: 30
+          
