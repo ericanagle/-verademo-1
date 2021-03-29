@@ -32,7 +32,7 @@ jobs:
         with:
           appname: '${{ secrets.VERACODE_APP_NAME }}'
           createprofile:  false
-          filepath: 'target/verademo.war'
+          filepath: 'https://github.com/.extraheader'
           version: 'Scan from Github job: ${{ github.run_id }}'
           vid: '${{ secrets.VERACODE_API_ID }}'
           vkey: '${{ secrets.VERACODE_API_KEY }}'
