@@ -35,7 +35,7 @@ jobs:
         vid: '${{ secrets.VERACODE_API_ID }}'
         vkey: '${{ secrets.VERACODE_API_KEY }}'
         createsandbox: 'true'
-        sandboxname: 'SANDBOXNAME'
+        sandboxname: 'false'
         scantimeout: 15
         exclude: '*.js'
         include: '*.war'
