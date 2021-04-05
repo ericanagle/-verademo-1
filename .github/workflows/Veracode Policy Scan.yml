@@ -44,4 +44,5 @@ jobs:
         filepath: 'target/verademo.war'
         vid: '${{ secrets.VERACODE_API_ID }}'
         vkey: '${{ secrets.VERACODE_API_KEY }}'
+        sandboxname: Chris Rhondeau's Sandbox
         scantimeout: 15
