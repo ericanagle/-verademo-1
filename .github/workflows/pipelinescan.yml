@@ -1,59 +1,73 @@
+# This workflow will initiate a Veracode Static Analysis Pipeline scan, return a results.json and convert to SARIF for upload as a code scanning alert
+
 name: Veracode Static Analysis Pipeline Scan
 
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ master ]
-  schedule:
-    - cron: '16 14 * * 3'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a job to build and submit pipeline scan, you will need to customize the build process accordingly and make sure the artifact you build is used as the file input to the pipeline scan file parameter
-  build-and-pipeline-scan:
+  build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     steps:
-
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it and copies all sources into ZIP file for submitting for analysis. Replace this section with your applications build steps
     - uses: actions/checkout@v2
-      with:
-        repository: ''
+        
+  # build the application
+    - uses: actions/setup-java@v1 # Make java accessible on path so the uploadandscan action can run.
+      with: 
+        java-version: '8'
 
-    - uses: papeloto/action-zip@v1
+    - name: Check for Maven build
+      id: check_maven
+      uses: andstor/file-existence-action@v1
       with:
-        files: /
-        recursive: true
-        dest: veracode-pipeline-scan-results-to-sarif.zip
+        files: "pom.xml"
 
-    - uses: actions/upload-artifact@v1
+    - name: Check for Gradle build
+      id: check_gradle
+      uses: andstor/file-existence-action@v1
       with:
-        name: my-artifact
-        path: veracode-pipeline-scan-results-to-sarif.zip
+        files: "build.gradle"
 
-    # download the Veracode Static Analysis Pipeline scan jar
-    - uses: wei/curl@master
-      with:
-        args: -O https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
-    - run: unzip -o pipeline-scan-LATEST.zip
+    - name: Build application with mvn
+      if: steps.check_maven.outputs.files_exists == 'true'
+      run: mvn -B package --file pom.xml
 
-    - uses: actions/setup-java@v1
+    - name: Build application with gradle
+      if: steps.check_gradle.outputs.files_exists == 'true'
+      run: gradle clean build
+      
+    - name: Archive package
+      uses: actions/upload-artifact@v2
       with:
-        java-version: 1.8
-    - run:  java -jar /opt/veracode/pipeline-scan.jar --veracode_api_id="${{secrets.VERACODE_API_ID}}" --veracode_api_key="${{secrets.VERACODE_API_KEY}}" --file="verademo.war" --app_id="${{secrets.VERACODE_APP_ID}}" --json_output_file="results.json"
+        name: CodePackage
+        path: '**/*.war'
+  
+  pipeline-scan:
+    needs: build
+    runs-on: ubuntu-latest
+    container: 
+      image: veracode/pipeline-scan:latest
+      options: --user root # our normal luser doesn't have privs to write to github directories
+
+    steps:
+    - name: Retrieve artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: CodePackage
+        path: /github/home
+    
+    #  Submit  project to pipeline scan
+    - name: Pipeline Scan
+      run: |
+        cd /github/home/target
+        java -jar /opt/veracode/pipeline-scan.jar --veracode_api_id="${{secrets.VERACODE_API_ID}}" --veracode_api_key="${{secrets.VERACODE_API_KEY}}" --file="verademo.war" --app_id="${{secrets.VERACODE_APP_ID}}" --json_output_file="results.json"
       continue-on-error: true
-    - uses: actions/upload-artifact@v1
-      with:
-        name: ScanResults
-        path: results.json
-    - name: Convert pipeline scan output to SARIF format
-      id: convert
-      uses: veracode/veracode-pipeline-scan-results-to-sarif@master
-      with:
-        pipeline-results-json: results.json
-    - uses: github/codeql-action/upload-sarif@v1
-      with:
-        # Path to SARIF file relative to the root of the repository
-        sarif_file: veracode-results.sarif
